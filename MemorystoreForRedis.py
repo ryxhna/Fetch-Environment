@@ -61,15 +61,15 @@ def GetRedisMemorystore(project_id):
             redis_info.append({
                 "Project ID": project_id,
                 "Instance ID": instance.name.split('/')[-1],
-                "Location": instance.location_id,
                 "Type": instance.tier.name,
                 "Version": instance.redis_version,
+                "Location": instance.location_id,
                 "Status": instance.state.name,
                 "Calls": metrics.get("calls", "N/A"),
                 "Used Memory": metrics.get("used_memory", "N/A"),
                 "Network Bytes": metrics.get("network_bytes", "N/A"),
-                "Read Endpoint": f"{instance.read_endpoint}:{instance.read_endpoint_port}" if instance.read_endpoint else "",
                 "Primary Endpoint": f"{instance.host}:{instance.port}",
+                "Read Endpoint": f"{instance.read_endpoint}:{instance.read_endpoint_port}" if instance.read_endpoint else "",
                 "IP Range": instance.authorized_network if instance.authorized_network else "N/A",
                 "Connection Mode": instance.connect_mode.name,
                 "Authorized Network": instance.authorized_network if instance.authorized_network else "N/A",
@@ -78,10 +78,10 @@ def GetRedisMemorystore(project_id):
                 "Instance Capacity": instance.memory_size_gb,
                 "Max Memory": f"{instance.memory_size_gb} GB",
                 "RDB Snapshot": "On" if instance.persistence_iam_identity else "Off",
+                "Labels": ", ".join(f"{k}: {v}" for k, v in instance.labels.items()) if instance.labels else "None",
                 "AUTH": "Enabled" if instance.auth_enabled else "Disabled",
                 "In-transit Encryption": "Enabled" if instance.transit_encryption_mode.name == "SERVER_AUTHENTICATION" else "Disabled",
-                "CMEK": instance.persistence_iam_identity if instance.persistence_iam_identity else "Disabled",
-                "Labels": ", ".join(f"{k}: {v}" for k, v in instance.labels.items()) if instance.labels else "None",
+                "CMEK": instance.persistence_iam_identity if instance.persistence_iam_identity else "Disabled"
             })
         logging.info(f"Found {len(redis_info)} Redis instance(s) for project {project_id}.")
         return redis_info

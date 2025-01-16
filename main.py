@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 from Runner import LoadProject, CreateFolderOutput
 from MemorystoreForRedis import GetRedisMemorystore
-from CloudStorage import get_bucket_storage
+from StorageBucket import GetStorageBuckets
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -34,7 +34,7 @@ def main():
         redis_data.extend(redis_instances)
         
         # Fetch Storage data
-        storage_buckets = get_bucket_storage(project_id)
+        storage_buckets = GetStorageBuckets(project_id)
         storage_data.extend(storage_buckets)
 
     # Convert data to Pandas DataFrames
@@ -42,7 +42,7 @@ def main():
     storage_df = pd.DataFrame(storage_data)
 
     # Save to Excel
-    create_output_folder()
+    CreateFolderOutput()
     with pd.ExcelWriter(OUTPUT_FILE, engine='openpyxl') as writer:
         if not redis_df.empty:
             redis_df.to_excel(writer, sheet_name="Redis Instances", index=False)
