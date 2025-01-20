@@ -26,7 +26,18 @@ disk_type_mapping = {
     "confidential-vm": "Confidential VM",
 }
 
-def gkeNodepool(project_id, cluster_name, location):
+def gke_nodepool(project_id, cluster_name, location):
+    """Fetches information about GKE node pools in a cluster.
+
+    Args:
+        project_id (str): The ID of the GCP project.
+        cluster_name (str): The name of the GKE cluster.
+        location (str): The location of the GKE cluster.
+
+    Returns:
+        list: A list of dictionaries containing information about each node pool.
+    """
+
     client = container_v1.ClusterManagerClient()
     node_pools_info = []
 
@@ -40,25 +51,25 @@ def gkeNodepool(project_id, cluster_name, location):
                 "Cluster Name": cluster_name,
                 "Nodepool Name": node_pool.name,
                 "Node Version": node_pool.version,
-                "Current COS Version": getattr(node_pool.config, "image_version", "N/A"),
-                "End of Standard Support": getattr(node_pool.config, "end_of_life_date", "N/A"),
-                "End of Extended Support": getattr(node_pool.config, "end_of_extended_support", "N/A"),
+                #"Current COS Version": getattr(node_pool.config, "image_version", "N/A"),
+                #"End of Standard Support": getattr(node_pool.config, "end_of_life_date", "N/A"),
+                #"End of Extended Support": getattr(node_pool.config, "end_of_extended_support", "N/A"),
                 "Image Type": image_type_mapping.get(node_pool.config.image_type, "Unknown"),
                 "Machine Type": node_pool.config.machine_type,
                 "Boot Disk Size (per node)": node_pool.config.disk_size_gb,
                 "Boot Disk Type": disk_type_mapping.get(node_pool.config.disk_type, "Unknown"),
-                "Networks": getattr(node_pool.network_config, "network", "N/A"),
-                "Subnet": getattr(node_pool.network_config, "subnetwork", "N/A"),
-                "Name Pod IP Address Ranges": getattr(node_pool.network_config, "name_pod_ip_ranges", "N/A"),
-                "IPv4 Pod IP Address Range": getattr(node_pool.network_config, "pod_ipv4_range", "N/A"),
+                #"Networks": getattr(node_pool.network_config, "network", "N/A"),
+                #"Subnet": getattr(node_pool.pod_range, "subnetwork", "N/A"),
+                #"Name Pod IP Address Ranges": getattr(node_pool.network_config, "name_pod_ip_ranges", "N/A"),
+                #"IPv4 Pod IP Address Range": getattr(node_pool.network_config, "pod_ipv4_range", "N/A"),
                 "Number of nodes": calculate_total_nodes(node_pool),
                 "Autoscaling": "On" if node_pool.autoscaling.enabled else "Off",
                 "Node Zones": node_pool.locations if node_pool.locations else [],
-                "Maximum Pods per Node": getattr(node_pool.config, "max_pods_constraint", {}).get("max_pods_per_node", "Not available"), 
+                "Maximum Pods per Node": getattr(node_pool.max_pods_constraint, "max_pods_per_node", "Not available"),
                 "Max Surge": node_pool.upgrade_settings.max_surge if node_pool.upgrade_settings else "N/A",
                 "Taints": get_taints(node_pool.config.taints) if node_pool.config else "Not available",
                 "GCE Instance Metadata": node_pool.config.metadata if node_pool.config.metadata else {},
-            } 
+            }
             node_pools_info.append(node_pool_info)
 
     except NotFound:
