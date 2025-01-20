@@ -1,13 +1,14 @@
 import json
 import logging
 from pathlib import Path
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # File paths
-PROJECT_LIST_FILE = "project-list/NON-PROD.json"
-OUTPUT_FOLDER = "output"
+PROJECT_LIST_FILE = Path("project-list/NON-PROD.json")
+OUTPUT_FOLDER = Path("output")
 
 def LoadProject():
     """Load the list of project IDs from the JSON file."""
@@ -24,4 +25,8 @@ def LoadProject():
 
 def CreateFolderOutput():
     """Ensure the output folder exists."""
-    Path(OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
+    try:
+        OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+        logging.info(f"Output folder is ready: {OUTPUT_FOLDER}")
+    except OSError as e:
+        logging.error(f"Error creating output folder {OUTPUT_FOLDER}: {e}")

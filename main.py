@@ -1,7 +1,6 @@
 import os
 import logging
 import pandas as pd
-
 from Runner import LoadProject, CreateFolderOutput
 from MemorystoreForRedis import GetRedisMemorystore
 from StorageBucket import GetStorageBuckets
@@ -43,12 +42,20 @@ def main():
         storage_data.extend(storage_buckets)
 
         # Fetch GKE cluster data
-        clusters = gkeCluster(project_id)
+        try:
+            clusters = gke_cluster(project_id)
+        except KeyError as e:
+            logging.error(f"Error processing cluster for project {project_id}: {e}")
+            continue  # Continue to the next project if an error occurs
         clusters_data.extend(clusters)
 
         # Fetch GKE node pool data
         for cluster in clusters:
-            node_pools = gkeNodepool(project_id, cluster["Cluster Name"], cluster["Control Plane Zone"])
+            try:
+                node_pools = gke_nodepool(project_id, cluster["Cluster Name"], cluster["Control Plane Zone"])
+            except KeyError as e:
+                logging.error(f"Error processing node pool for cluster {cluster['Cluster Name']} in project {project_id}: {e}")
+                continue
             node_pools_data.extend(node_pools)
 
     # Convert data to Pandas DataFrames
