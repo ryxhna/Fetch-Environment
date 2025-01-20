@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 OUTPUT_FOLDER = "output"
 OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, "Asset List 2025.xlsx")
 
-def Get-gkeCluster(project_id):
+def gkeCluster(project_id):
     """Fetch GKE cluster details for a given project ID."""
     client = container_v1.ClusterManagerClient()
     clusters_info = []

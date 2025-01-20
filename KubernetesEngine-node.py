@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 OUTPUT_FOLDER = "output"
 OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, "Asset List 2025.xlsx")
 
-def Get-gkeNodepool(project_id, cluster_name, location):
+def gkeNodepool(project_id, cluster_name, location):
     """Fetch node pool details for a cluster."""
     client = container_v1.ClusterManagerClient()
     node_pools_info = []

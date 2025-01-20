@@ -5,8 +5,8 @@ import pandas as pd
 from Runner import LoadProject, CreateFolderOutput
 from MemorystoreForRedis import GetRedisMemorystore
 from StorageBucket import GetStorageBuckets
-from KubernetesEngine_cluster import Get-gkeCluster
-from KubernetesEngine_node import Get-gkeNodepool
+from KubernetesEngine_cluster import gkeCluster
+from KubernetesEngine_node import gkeNodepool
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -43,12 +43,12 @@ def main():
         storage_data.extend(storage_buckets)
 
         # Fetch GKE cluster data
-        clusters = Get-gkeCluster(project_id)
+        clusters = gkeCluster(project_id)
         clusters_data.extend(clusters)
 
         # Fetch GKE node pool data
         for cluster in clusters:
-            node_pools = Get-gkeNodepool(project_id, cluster["Cluster Name"], cluster["Control Plane Zone"])
+            node_pools = gkeNodepool(project_id, cluster["Cluster Name"], cluster["Control Plane Zone"])
             node_pools_data.extend(node_pools)
 
     # Convert data to Pandas DataFrames
