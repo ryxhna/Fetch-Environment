@@ -6,7 +6,7 @@ from google.api_core.exceptions import GoogleAPICallError, NotFound
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Mapping for Image Type
-image_type_mapping = {
+ImageType_mapping = {
     "COS_CONTAINERD": "Container-Optimized OS with containerd (cos_containerd)",
     "UBUNTU": "Ubuntu",
     "UBUNTU_CONTAINERD": "Ubuntu with containerd",
@@ -17,7 +17,7 @@ image_type_mapping = {
 }
 
 # Mapping for Disk Type
-disk_type_mapping = {
+DiskType_mapping = {
     "pd-standard": "Standard persistent disk",
     "pd-balanced": "Balanced persistent disk",
     "pd-ssd": "SSD persistent disk",
@@ -26,18 +26,7 @@ disk_type_mapping = {
     "confidential-vm": "Confidential VM",
 }
 
-def gke_nodepool(project_id, cluster_name, location):
-    """Fetches information about GKE node pools in a cluster.
-
-    Args:
-        project_id (str): The ID of the GCP project.
-        cluster_name (str): The name of the GKE cluster.
-        location (str): The location of the GKE cluster.
-
-    Returns:
-        list: A list of dictionaries containing information about each node pool.
-    """
-
+def gkeNodepool(project_id, cluster_name, location):
     client = container_v1.ClusterManagerClient()
     node_pools_info = []
 
@@ -54,20 +43,20 @@ def gke_nodepool(project_id, cluster_name, location):
                 #"Current COS Version": getattr(node_pool.config, "image_version", "N/A"),
                 #"End of Standard Support": getattr(node_pool.config, "end_of_life_date", "N/A"),
                 #"End of Extended Support": getattr(node_pool.config, "end_of_extended_support", "N/A"),
-                "Image Type": image_type_mapping.get(node_pool.config.image_type, "Unknown"),
+                "Image Type": ImageType_mapping.get(node_pool.config.image_type, "Unknown"),
                 "Machine Type": node_pool.config.machine_type,
                 "Boot Disk Size (per node)": node_pool.config.disk_size_gb,
-                "Boot Disk Type": disk_type_mapping.get(node_pool.config.disk_type, "Unknown"),
+                "Boot Disk Type": DiskType_mapping.get(node_pool.config.disk_type, "Unknown"),
                 #"Networks": getattr(node_pool.network_config, "network", "N/A"),
                 #"Subnet": getattr(node_pool.pod_range, "subnetwork", "N/A"),
                 #"Name Pod IP Address Ranges": getattr(node_pool.network_config, "name_pod_ip_ranges", "N/A"),
                 #"IPv4 Pod IP Address Range": getattr(node_pool.network_config, "pod_ipv4_range", "N/A"),
-                "Number of nodes": calculate_total_nodes(node_pool),
+                "Number of nodes": calculate_TotalNodes(node_pool),
                 "Autoscaling": "On" if node_pool.autoscaling.enabled else "Off",
                 "Node Zones": node_pool.locations if node_pool.locations else [],
                 "Maximum Pods per Node": getattr(node_pool.max_pods_constraint, "max_pods_per_node", "Not available"),
                 "Max Surge": node_pool.upgrade_settings.max_surge if node_pool.upgrade_settings else "N/A",
-                "Taints": get_taints(node_pool.config.taints) if node_pool.config else "Not available",
+                "Taints": getTaints(node_pool.config.taints) if node_pool.config else "Not available",
                 "GCE Instance Metadata": node_pool.config.metadata if node_pool.config.metadata else {},
             }
             node_pools_info.append(node_pool_info)
@@ -79,7 +68,7 @@ def gke_nodepool(project_id, cluster_name, location):
 
     return node_pools_info
 
-def calculate_total_nodes(node_pool):
+def calculate_TotalNodes(node_pool):
     if hasattr(node_pool, "instance_group_urls"):
         total_nodes = len(node_pool.instance_group_urls)
         return f"{total_nodes} total ({1} per zone)"
@@ -87,13 +76,13 @@ def calculate_total_nodes(node_pool):
         return f"{node_pool.initial_node_count} total"
     return "Not available"
 
-def get_taints(taints):
+def getTaints(taints):
     if not taints:
         return "Not available"
 
     formatted_taints = []
     for taint in taints:
-        key_value = f"{taint.key}={taint.value}"  # Only key and value
+        key_value = f"{taint.key}={taint.value}" 
         formatted_taints.append(key_value)
 
     return ", ".join(formatted_taints)

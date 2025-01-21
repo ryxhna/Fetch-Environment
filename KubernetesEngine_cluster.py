@@ -12,18 +12,7 @@ def format_date(date_obj):
     else:
         return "N/A"
 
-# Mapping for Image Type
-image_type_mapping = {
-    "COS_CONTAINERD": "Container-Optimized OS with containerd (cos_containerd)",
-    "UBUNTU": "Ubuntu",
-    "UBUNTU_CONTAINERD": "Ubuntu with containerd",
-    "CUSTOM_IMAGE": "Custom Image",
-    "ML_IMAGE": "Machine Learning Optimized Image",
-    "BIG_DATA_IMAGE": "Big Data Optimized Image",
-    "LEGACY_IMAGE": "Legacy Image",
-}
-
-def gke_cluster(project_id):
+def gkeCluster(project_id):
     client = container_v1.ClusterManagerClient()
     clusters_info = []
 
@@ -52,11 +41,11 @@ def gke_cluster(project_id):
                     "Subnet": cluster.subnetwork,
                     "Cluster Pod IPv4 Range (default)": cluster.cluster_ipv4_cidr,
                     #"HTTP Load Balancing": getattr(cluster, "http_load_balancing", {}).get("enabled", "N/A"),
-                    "Gateway API": "Enabled" if hasattr(cluster, "gateway_api_config") and getattr(cluster.gateway_api_config, "Enabled", False) else "Disabled",
-                    "Binary Authorization": "Enabled" if getattr(cluster.binary_authorization, "enabled", False) else "Disabled",
-                    "Secret Manager": "Enabled" if getattr(cluster.secret_manager_config, "enabled", False) else "Disabled",
-                    "Legacy Authorization": "Enabled" if getattr(cluster.legacy_abac, "enabled", False) else "Disabled",
-                    "Security Posture": "Enabled" if getattr(cluster.security_posture_config, "enabled", False) else "Disabled",
+                    #"Gateway API": "Enabled" if hasattr(cluster, "gateway_api_config") and getattr(cluster.gateway_api_config, "Enabled", False) else "Disabled",
+                    #"Binary Authorization": "Enabled" if getattr(cluster.binary_authorization, "enabled", False) else "Disabled",
+                    #"Secret Manager": "Enabled" if getattr(cluster.secret_manager_config, "enabled", False) else "Disabled",
+                    #"Legacy Authorization": "Enabled" if getattr(cluster.legacy_abac, "enabled", False) else "Disabled",
+                    #"Security Posture": "Enabled" if getattr(cluster.security_posture_config, "enabled", False) else "Disabled",
                     #"Service Mesh": "Enabled" if hasattr(cluster, "service_mesh") and getattr(cluster.service_mesh, "enabled", False) else "N/A", 
                     "Tags": getattr(cluster, "network_tags", []),
                     "Labels": cluster.resource_labels,
@@ -72,5 +61,3 @@ def gke_cluster(project_id):
         logging.error(f"Error fetching clusters for project {project_id}: {e}")
 
     return clusters_info
-
-# ... (rest of the code)
