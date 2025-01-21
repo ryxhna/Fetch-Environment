@@ -1,5 +1,5 @@
 import logging
-from google.cloud import container_v1
+from google.cloud import container_v1, compute_v1
 from google.api_core.exceptions import GoogleAPICallError, NotFound
 
 # Configure logging
@@ -26,6 +26,23 @@ DiskType_mapping = {
     "confidential-vm": "Confidential VM",
 }
 
+def getNetwork(project_id, subnet):
+    try:
+        client = compute_v1.SubnetworksClient()
+        subnet_info = client.get(project=project_id, region=subnet["region"], subnetwork=subnet["name"])
+        return {
+            "Primary IPv4 Range": subnet_info.ip_cidr_range,
+            "Region": subnet_info.region,
+            "Network": subnet_info.network,
+        }
+    except GoogleAPICallError as e:
+        logging.error(f"Error fetching subnet details for {subnet['name']}: {e}")
+        return {
+            "Primary IPv4 Range": "Error fetching details",
+            "Region": subnet.get("region", "Unknown"),
+            "Network": "Unknown",
+        }
+
 def gkeNodepool(project_id, cluster_name, location):
     client = container_v1.ClusterManagerClient()
     node_pools_info = []
@@ -35,22 +52,29 @@ def gkeNodepool(project_id, cluster_name, location):
         response = client.list_node_pools(parent=parent)
 
         for node_pool in response.node_pools:
+            network = getattr(node_pool.network_config, "network", "N/A")
+            subnet = getattr(node_pool.network_config, "subnetwork", "N/A")
+
+            # Get Subnet details if available
+            subnet_info = {}
+            if subnet != "N/A":
+                subnet_parts = subnet.split("/")  # Extract region and subnet name
+                subnet_info = getNetwork(
+                    project_id, {"region": subnet_parts[-3], "name": subnet_parts[-1]}
+                )
+
             node_pool_info = {
                 "Project ID": project_id,
                 "Cluster Name": cluster_name,
                 "Nodepool Name": node_pool.name,
                 "Node Version": node_pool.version,
-                #"Current COS Version": getattr(node_pool.config, "image_version", "N/A"),
-                #"End of Standard Support": getattr(node_pool.config, "end_of_life_date", "N/A"),
-                #"End of Extended Support": getattr(node_pool.config, "end_of_extended_support", "N/A"),
                 "Image Type": ImageType_mapping.get(node_pool.config.image_type, "Unknown"),
                 "Machine Type": node_pool.config.machine_type,
                 "Boot Disk Size (per node)": node_pool.config.disk_size_gb,
                 "Boot Disk Type": DiskType_mapping.get(node_pool.config.disk_type, "Unknown"),
-                #"Networks": getattr(node_pool.network_config, "network", "N/A"),
-                #"Subnet": getattr(node_pool.pod_range, "subnetwork", "N/A"),
-                #"Name Pod IP Address Ranges": getattr(node_pool.network_config, "name_pod_ip_ranges", "N/A"),
-                #"IPv4 Pod IP Address Range": getattr(node_pool.network_config, "pod_ipv4_range", "N/A"),
+                "Network": network,
+                "Subnet": subnet,
+                **subnet_info,
                 "Number of nodes": calculate_TotalNodes(node_pool),
                 "Autoscaling": "On" if node_pool.autoscaling.enabled else "Off",
                 "Node Zones": node_pool.locations if node_pool.locations else [],
