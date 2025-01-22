@@ -4,7 +4,7 @@ import pandas as pd
 from Runner import LoadProject, CreateFolderOutput
 from MemorystoreForRedis import GetRedisMemorystore
 from StorageBucket import GetStorageBuckets
-from KubernetesEngine import gkeCluster, gkeNodepool
+from KubernetesEngine import getKubernetesEngine, processProjects
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -28,13 +28,16 @@ def main():
     for project_id in projects:
         logging.info(f"Processing project: {project_id}")
 
+        # Ambil data Redis
         redis_instances = GetRedisMemorystore(project_id)
         redis_data.extend(redis_instances)
 
+        # Ambil data Storage Bucket
         storage_buckets = GetStorageBuckets(project_id)
         storage_data.extend(storage_buckets)
 
-        kubernetes_engine = getCluster(project_id), getNodepool(project_id)
+        # Ambil data Kubernetes (Cluster dan Node Pool)
+        kubernetes_engine = getKubernetesEngine(project_id)
         kubernetes_data.extend(kubernetes_engine)
 
     # Convert data to Pandas DataFrames

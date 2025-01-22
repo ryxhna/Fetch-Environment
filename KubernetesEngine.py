@@ -1,12 +1,12 @@
 import logging
 from google.cloud import container_v1
 from google.api_core.exceptions import NotFound
-from Runner import LoadProject 
+from Runner import LoadProject
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Mappings for better readability of image types and disk types
+# File paths
 ImageType_mapping = {
     "COS_CONTAINERD": "Container-Optimized OS with containerd (cos_containerd)",
     "UBUNTU": "Ubuntu",
@@ -26,95 +26,97 @@ DiskType_mapping = {
     "confidential-vm": "Confidential VM",
 }
 
-def getCluster(project_id):
+def getKubernetesEngine(project_id):
     cluster_client = container_v1.ClusterManagerClient()
-    clusters = []
+    results = []
+
     try:
-        response = cluster_client.list_clusters(parent=f"projects/{project_id}/locations/-")
-        for cluster in response.clusters:
-            details = {
+        clusters_response = cluster_client.list_clusters(parent=f"projects/{project_id}/locations/-")
+        for cluster in clusters_response.clusters:
+            cluster_info = {
+                "Project ID": project_id,
                 "Cluster Name": cluster.name,
-                "Version Cluster": cluster.current_master_version,
-                "Current COS Version": cluster.current_node_version,
-                "Control Plane Address Range": getattr(cluster.private_cluster_config, "master_ipv4_cidr_block", "Not available"),
+                "Mode": "Standard" if cluster.private_cluster_config else "Autopilot",
+                "Location Type": "Regional" if cluster.locations and len(cluster.locations) > 1 else "Zonal",
+                "Location": cluster.location,
+                "Cluster Size": cluster.current_node_count,
+                "Cluster Version": cluster.current_master_version,
+                "COS Version": cluster.current_node_version,
                 "Private Endpoint": getattr(cluster.private_cluster_config, "private_endpoint", "Not available"),
+                "Control Plane Address Range": cluster.private_cluster_config.master_ipv4_cidr_block if cluster.private_cluster_config else "N/A",
+                "Cluster Pod IPv4 Range (default)": cluster.cluster_ipv4_cidr,
+                "Maximum Pods per Node": getattr(cluster.default_max_pods_constraint, "max_pods_per_node", "Not available"),
                 "Network": cluster.network,
                 "Subnet": cluster.subnetwork,
-                "Cluster Pod IPv4 Range (default)": getattr(cluster.ip_allocation_policy, "cluster_ipv4_cidr_block", "Not available"),
-                "Maximum Pods per Node": getattr(cluster.default_max_pods_constraint, "max_pods_per_node", "Not available"),
-                "Total Size": cluster.current_node_count,
+                "Autoscaling profile": getattr(cluster.autoscaling, "profile", "Balanced") if cluster.autoscaling else "Any",
+                "Tags": getattr(cluster, "network_tags", []),
                 "Labels": cluster.resource_labels,
-                "Vertical Pod Autoscaling": "disabled" if getattr(cluster.vertical_pod_autoscaling, "enabled", False) is False else "enabled",
-                "Autoscaling Profile": getattr(cluster.autoscaling, "profile", "Balanced") if cluster.autoscaling else "Any",
             }
-            clusters.append(details)
+
+            try:
+                node_pools_response = cluster_client.list_node_pools(parent=f"projects/{project_id}/locations/{cluster.location}/clusters/{cluster.name}")
+                for node_pool in node_pools_response.node_pools:
+                    node_pool_info = {
+                        "Node Pool Name": node_pool.name,
+                        "Node Version": node_pool.version,
+                        "Number of Nodes": calculate_TotalNodes(node_pool),
+                        "Image Type": ImageType_mapping.get(getattr(node_pool.config, "image_type", "Not available"), "Not available"),
+                        "Machine Type": getattr(node_pool.config, "machine_type", "Not available"),
+                        "Boot Disk Type": DiskType_mapping.get(node_pool.config.disk_type, "Unknown"),
+                        "Boot Disk Size (per node)": f"{getattr(node_pool.config, 'disk_size_gb', 'Not available')} GB",
+                        "Max Surge": node_pool.upgrade_settings.max_surge if node_pool.upgrade_settings else "N/A",
+                        "Autoscaling": "On" if node_pool.autoscaling.enabled else "Off",
+                        "Taints": getTaints(node_pool.config.taints) if node_pool.config else "Not available",
+                        "Node Zones": node_pool.locations if node_pool.locations else [],
+                        "GCE Instance Metadata": node_pool.config.metadata if node_pool.config.metadata else {},
+                    }
+                    combined_info = {key: node_pool_info.get(key, cluster_info.get(key, "Not available")) for key in [
+                        "Project ID", "Cluster Name", "Node Pool Name", "Cluster Size", "Mode", "Location Type", "Location",
+                        "COS Version", "Cluster Version", "Node Version", "Maximum Pods per Node", "Number of Nodes", "Private Endpoint",
+                        "Control Plane Address Range", "Cluster Pod IPv4 Range (default)", "Network", "Subnet", 
+                        "Autoscaling", "Autoscaling profile", "Max Surge", "Machine Type", "Boot Disk Type", "Boot Disk Size (per node)",
+                        "Image Type", "Node Zones", "Tags", "Taints", "Labels", "GCE Instance Metadata"
+                    ]}
+                    results.append(combined_info)
+
+            except NotFound:
+                logging.warning(f"Node pools not found for cluster '{cluster.name}' in project '{project_id}'.")
     except NotFound:
         logging.warning(f"No clusters found for project '{project_id}'.")
-    return clusters
 
-def getNodepool(project_id):
-    cluster_client = container_v1.ClusterManagerClient()
-    node_pools = []
-    try:
-        response = cluster_client.list_clusters(parent=f"projects/{project_id}/locations/-")
-        for cluster in response.clusters:
-            cluster_name = cluster.name
-            location = cluster.location
-            node_pool_response = cluster_client.list_node_pools(parent=f"projects/{project_id}/locations/{location}/clusters/{cluster_name}")
-            for node_pool in node_pool_response.node_pools:
-                details = {
-                    "Node Pool Name": node_pool.name,
-                    "Node Version": node_pool.version,
-                    "Number of Nodes": calculate_TotalNodes(node_pool),
-                    "Autoscaling": "On" if node_pool.autoscaling.enabled else "Off",
-                    "Node Zones": node_pool.locations,
-                }
-                if hasattr(node_pool, "config"):
-                    image_type = getattr(node_pool.config, "image_type", "Not available")
-                    disk_type = getattr(node_pool.config, "disk_type", "Not available")
-                    details.update({
-                        "Image Type": ImageType_mapping.get(image_type, image_type),
-                        "Machine Type": getattr(node_pool.config, "machine_type", "Not available"),
-                        "Boot Disk Type": DiskType_mapping.get(disk_type, disk_type),
-                        "Boot Disk Size (per node)": f"{getattr(node_pool.config, 'disk_size_gb', 'Not available')} GB",
-                        "Max Surge": getattr(node_pool.upgrade_settings, "max_surge", "N/A"),
-                        "Taints": getTaints(node_pool.config.taints),
-                        "GCE Instance Metadata": getattr(node_pool.config, "metadata", "Not available"),
-                    })
-                node_pools.append(details)
-    except NotFound:
-        logging.warning(f"No node pools found for project '{project_id}'.")
-    return node_pools
+    return results
 
-def calculate_TotalNodes(node_pool):
-    """Calculate the total number of nodes in a node pool."""
-    if hasattr(node_pool, "instance_group_urls"):
-        return len(node_pool.instance_group_urls)
-    elif hasattr(node_pool, "initial_node_count"):
-        return node_pool.initial_node_count
-    return "Not available"
-
-def getTaints(taints):
-    """Format taints for readability."""
-    if not taints:
-        return "Not available"
-    return ", ".join(f"{taint.key}={taint.value}:{taint.effect}" for taint in taints)
-
-def process_projects():
-    """Process all projects and retrieve GKE cluster and node pool details."""
+def processProjects():
     projects = LoadProject()
     if not projects:
         logging.error("No projects found. Ensure the JSON file is correctly configured.")
-        return [], []
+        return []
 
-    all_clusters = []
-    all_node_pools = []
-
+    all_data = []
     for project_id in projects:
         logging.info(f"Processing project: {project_id}")
-        clusters = getCluster(project_id)
-        node_pools = getNodepool(project_id)
-        all_clusters.extend(clusters)
-        all_node_pools.extend(node_pools)
+        project_data = getKubernetesEngine(project_id)
+        all_data.extend(project_data)
 
-    return all_clusters, all_node_pools
+    return all_data
+
+def calculate_TotalNodes(node_pool):
+    if hasattr(node_pool, "instance_group_urls"):
+        total_nodes = len(node_pool.instance_group_urls)
+        return f"{total_nodes} total ({1} per zone)"
+    elif hasattr(node_pool, "initial_node_count"):
+        return f"{node_pool.initial_node_count} total"
+    return "Not available"
+
+def getTaints(taints):
+    if not taints:
+        return "Not available"
+    
+    formatted_taints = []
+    for taint in taints:
+        key_value = f"{taint.key}={taint.value}"  # Only key and value
+        formatted_taints.append(key_value)
+    
+    return ", ".join(formatted_taints)
+
+from kubernetes import client, config
