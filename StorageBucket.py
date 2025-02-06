@@ -50,23 +50,22 @@ def GetStorageBuckets(project_id):
                 "Bucket Name": bucket.name,
                 "Creation Date": bucket.time_created.strftime("%Y-%m-%d"),
                 "Last Modified": bucket.updated.strftime("%Y-%m-%d") if bucket.updated else "N/A",
-                "Location Type": bucket.location_type,  # Multi-regional, Regional, etc.
+                "Location Type": bucket.location_type, 
                 "Location": bucket.location,
                 "Storage Class": bucket.storage_class,
                 "Hierarchical Namespace": "Enabled" if bucket.iam_configuration.uniform_bucket_level_access_enabled else "Not enabled",
                 "Replication": "Enabled" if bucket.iam_configuration.public_access_prevention == "enforced" else "Disabled",
-                #"Cross-bucket Replication": ", ".join(bucket.replication_targets) if bucket.replication_targets else "None",
+                # "Cross-bucket Replication": ", ".join(bucket.replication_targets) if bucket.replication_targets else "None",
                 "Access Control": "Uniform" if bucket.iam_configuration.uniform_bucket_level_access_enabled else "Fine-grained",
                 "Public Access Prevention": pap_status,
                 "Soft Delete Policy": soft_delete_policy,
                 "Object Versioning": "Enabled" if bucket.versioning_enabled else "Disabled",
-                #"Bucket Retention Policy": bucket.retention_policy.retention_period if bucket.retention_policy else "None",
-                #"Object Retention": bucket.retention_policy.retention_period if bucket.retention_policy else "None",
-                "Lifecycle Rules": lifecycle_rules_str,
-                "Tags": ", ".join(f"{k}: {v}" for k, v in bucket.labels.items()) if bucket.labels else "None",
+                # "Bucket Retention Policy": bucket.retention_policy.retention_period if bucket.retention_policy else "None",
+                # "Object Retention": bucket.retention_policy.retention_period if bucket.retention_policy else "None",
                 "gsutil URI": f"gs://{bucket.name}",
-                "Cloud Console URL": f"https://console.cloud.google.com/storage/browser/{bucket.name}"
-
+                "Cloud Console URL": f"https://console.cloud.google.com/storage/browser/{bucket.name}",
+                "Tags": ", ".join(f"{k}: {v}" for k, v in bucket.labels.items()) if bucket.labels else "None",
+                "Lifecycle Rules": lifecycle_rules_str
             }
 
             bucket_info.append(bucket_details)

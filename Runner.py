@@ -7,24 +7,30 @@ import os
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # File paths
-PROJECT_LIST_FILE = Path("project-list/NON-PROD.json")
 OUTPUT_FOLDER = Path("output")
+PROJECT_LIST_FILE = [
+    Path("project-list/PROD.json"),
+    Path("project-list/NON-PROD.json"),
+]
 
 def LoadProject():
-    """Load the list of project IDs from the JSON file."""
-    try:
-        with open(PROJECT_LIST_FILE, 'r') as file:
-            data = json.load(file)
-        return data.get("projects", [])
-    except FileNotFoundError:
-        logging.error(f"Project list file not found: {PROJECT_LIST_FILE}")
-        return []
-    except json.JSONDecodeError as e:
-        logging.error(f"Error decoding JSON in {PROJECT_LIST_FILE}: {e}")
-        return []
+    all_projects = []
+    for file_path in PROJECT_LIST_FILE:
+        try:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+                projects = data.get("projects", [])
+                all_projects.extend(projects)
+                logging.info(f"Loaded projects from {file_path}")
+        except FileNotFoundError:
+            logging.error(f"Project list file not found: {file_path}")
+        except json.JSONDecodeError as e:
+            logging.error(f"Error decoding JSON in {file_path}: {e}")
+        except Exception as e:
+            logging.error(f"An unexpected error occurred with {file_path}: {e}")
+    return all_projects
 
 def CreateFolderOutput():
-    """Ensure the output folder exists."""
     try:
         OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
         logging.info(f"Output folder is ready: {OUTPUT_FOLDER}")

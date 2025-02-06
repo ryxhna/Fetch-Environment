@@ -28,17 +28,23 @@ def main():
     for project_id in projects:
         logging.info(f"Processing project: {project_id}")
 
-        # Ambil data Redis
-        redis_instances = GetRedisMemorystore(project_id)
-        redis_data.extend(redis_instances)
+        try:
+            redis_instances = GetRedisMemorystore(project_id)
+            redis_data.extend(redis_instances)
+        except Exception as e:
+            logging.error(f"Error getting Redis data for project {project_id}: {e}")
 
-        # Ambil data Storage Bucket
-        storage_buckets = GetStorageBuckets(project_id)
-        storage_data.extend(storage_buckets)
+        try:
+            storage_buckets = GetStorageBuckets(project_id)
+            storage_data.extend(storage_buckets)
+        except Exception as e: 
+            logging.error(f"Error getting Storage data for project {project_id}: {e}")
 
-        # Ambil data Kubernetes (Cluster dan Node Pool)
-        kubernetes_engine = getKubernetesEngine(project_id)
-        kubernetes_data.extend(kubernetes_engine)
+        try:
+            kubernetes_engine = getKubernetesEngine(project_id)
+            kubernetes_data.extend(kubernetes_engine)
+        except Exception as e: 
+            logging.error(f"Error getting Kubernetes data for project {project_id}: {e}")
 
     # Convert data to Pandas DataFrames
     redis_df = pd.DataFrame(redis_data)
