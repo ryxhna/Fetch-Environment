@@ -30,20 +30,20 @@ DiskType_mapping = {
 }
 
 def calculate_TotalNodes(node_pool, cluster_client=None, project_id=None, location=None, cluster_name=None):
-    # Cek apakah autoscaling aktif
+    # Check if autoscaling is enabled
     if hasattr(node_pool, "autoscaling") and node_pool.autoscaling.enabled:
         return f"Min: {node_pool.autoscaling.min_node_count}, Max: {node_pool.autoscaling.max_node_count}"
 
-    # Cek instance_group_urls
+    # Check instance group URLs
     if hasattr(node_pool, "instance_group_urls") and node_pool.instance_group_urls:
         total_nodes = len(node_pool.instance_group_urls)
         return f"{total_nodes} total"
 
-    # Gunakan initial_node_count sebagai fallback
+    # Use initial_node_count as a fallback
     if hasattr(node_pool, "initial_node_count"):
         return f"{node_pool.initial_node_count} total"
 
-    # Jika parameter cluster_client tersedia, ambil data dari API
+    # If cluster_client is available, retrieve data from API
     if cluster_client and project_id and location and cluster_name:
         try:
             instance_groups = cluster_client.list_node_pools(
