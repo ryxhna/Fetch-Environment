@@ -4,7 +4,7 @@ import pandas as pd
 from Runner import LoadProject, CreateFolderOutput
 from MemorystoreForRedis import GetRedisMemorystore
 from StorageBucket import GetStorageBuckets
-from KubernetesEngine import getKubernetesEngine, processProjects
+from KubernetesEngine import GetKubernetesEngine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -41,7 +41,7 @@ def main():
             logging.error(f"Error getting Storage data for project {project_id}: {e}")
 
         try:
-            kubernetes_engine = getKubernetesEngine(project_id)
+            kubernetes_engine = GetKubernetesEngine(project_id)
             kubernetes_data.extend(kubernetes_engine)
         except Exception as e: 
             logging.error(f"Error getting Kubernetes data for project {project_id}: {e}")
