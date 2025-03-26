@@ -3,7 +3,7 @@
 This program is designed to generate a detailed asset list from various services on Google Cloud Platform (GCP). The services currently supported include:  
 - **Google Storage**  
 - **Memorystore for Redis**  
-- **Kubernetes Engine** *(coming soon)*  
+- **Kubernetes Engine**  
 
 ## Features  
 - Extract detailed information about resources across multiple GCP services.  
@@ -18,7 +18,7 @@ This program is designed to generate a detailed asset list from various services
   - Google Cloud APIs required:
     - Storage API
     - Memorystore API
-    - Kubernetes Engine API *(for future use)*  
+    - Kubernetes Engine API 
 - An account that has access to the service to be used in Google Cloud Platform or Service account credentials (JSON key file) with the appropriate role to access the target GCP service.  
 
 ### Python Libraries  
