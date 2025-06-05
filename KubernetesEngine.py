@@ -5,7 +5,7 @@ from google.cloud import container_v1
 from google.api_core.exceptions import NotFound
 from Runner import LoadProject
 
-# Konfigurasi logging
+# Configuration logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Mapping Image Type
@@ -28,6 +28,16 @@ DiskType_mapping = {
     "local-ssd": "Local SSD",
     "confidential-vm": "Confidential VM",
 }
+
+# Mapping Release Channel
+ReleaseChannel_mapping = {
+    "UNSPECIFIED": "No channel",
+    "RAPID": "Rapid",
+    "REGULAR": "Regular",
+    "STABLE": "Stable",
+    "EXTENDED": "Extended",
+}
+
 
 def calculate_TotalNodes(node_pool, cluster_client=None, project_id=None, location=None, cluster_name=None):
     # Check if autoscaling is enabled
@@ -64,15 +74,21 @@ def getKubernetesEngine(project_id):
         clusters_response = cluster_client.list_clusters(parent=f"projects/{project_id}/locations/-")
         for cluster in clusters_response.clusters:
             total_nodes = 0
+            
+            # Defensive programming
+            release_channel_enum = cluster.release_channel.channel if cluster.release_channel else None
+            release_channel_str = release_channel_enum.name if release_channel_enum else "UNSPECIFIED"
+            release_channel_value = ReleaseChannel_mapping.get(release_channel_str, "Unknown")
+
             cluster_info = {
                 "Project ID": project_id,
                 "Cluster Name": cluster.name,
+                "Release Channel": release_channel_value,
                 "Mode": "Standard" if cluster.private_cluster_config else "Autopilot",
                 "Location Type": "Regional" if cluster.locations and len(cluster.locations) > 1 else "Zonal",
                 "Location": cluster.location,
                 "Cluster Size": cluster.current_node_count,
                 "Cluster Version": cluster.current_master_version,
-                # "COS Version": cluster.current_node_version,
                 "Private Endpoint": getattr(cluster.private_cluster_config, "private_endpoint", "Not available"),
                 "Control Plane Address Range": cluster.private_cluster_config.master_ipv4_cidr_block if cluster.private_cluster_config else "N/A",
                 "Cluster Pod IPv4 Range (default)": cluster.cluster_ipv4_cidr,
@@ -81,7 +97,13 @@ def getKubernetesEngine(project_id):
                 "Subnet": cluster.subnetwork,
                 "Autoscaling Profile": getattr(cluster.autoscaling, "profile", "Balanced") if cluster.autoscaling else "Any",
                 "Tags": getattr(cluster, "network_tags", []),
-                "Labels": cluster.resource_labels
+                "Labels": cluster.resource_labels,
+
+                # Additional fields
+                "IPv4 Service Range": getattr(cluster, "services_ipv4_cidr", "Not available"),
+                "HTTP Load Balancing": "Enabled" if getattr(cluster.addons_config, "http_load_balancing", None) and cluster.addons_config.http_load_balancing.enabled else "Disabled",
+                "Gateway API": "Enabled" if getattr(cluster.addons_config, "gcp_filestore_csi_driver_config", None) and cluster.addons_config.gcp_filestore_csi_driver_config.enabled else "Disabled",
+                "Service Mesh": "Enabled" if getattr(cluster.addons_config, "istio_config", None) and cluster.addons_config.istio_config.enabled else "Disabled",
             }
 
             try:
@@ -107,12 +129,13 @@ def getKubernetesEngine(project_id):
                         "GCE Instance Metadata": node_pool.config.metadata if node_pool.config.metadata else {},
                     }
                     combined_info = {key: node_pool_info.get(key, cluster_info.get(key, "Not available")) for key in [
-                        "Project ID", "Cluster Name", "Node Pool Name", "Cluster Size", "Mode", 
+                        "Project ID", "Cluster Name", "Node Pool Name", "Cluster Size", "Mode", "Release Channel",
                         "Location Type", "Location", "Cluster Version", "Node Version", 
                         "Autoscaling Profile", "Autoscaling Status", "Autoscaling (Min/Max/Total)", "Maximum Pods per Node",
                         "Private Endpoint", "Control Plane Address Range", "Cluster Pod IPv4 Range (default)", "Network", "Subnet", 
                         "Max Surge", "Machine Type", "Boot Disk Type", "Boot Disk Size (per node)",
                         "Image Type", "Node Zones", "Tags", "Taints", "Labels", "GCE Instance Metadata",
+                        "IPv4 Service Range", "HTTP Load Balancing", "Gateway API", "Service Mesh" 
                     ]}
                     results.append(combined_info)
 
